@@ -1,0 +1,350 @@
+---
+title: 'STAT 420: Homework 7'
+author: "Fall 2016, Unger"
+date: 'Due: Tuesdsay, November 1 by 11:50 PM CT'
+output:
+  html_document:
+    theme: readable
+    toc: yes
+---
+
+# Assignment
+
+## Exercise 1 (Nutrition Data revisited)
+
+For this exercise we will use the data stored in [`nutrition.csv`](nutrition.csv) previously seen in HW04. It contains the nutritional values per serving size for a large variety of foods as calculated by the USDA. It is a cleaned version totaling 5,138 observations and is current as of September 2015.
+
+The variables in the dataset are:
+
+- `ID` 
+- `Desc` - Short description of food
+- `Water` - in grams
+- `Calories` 
+- `Protein` - in grams
+- `Fat` - in grams
+- `Carbs` - Carbohydrates, in grams
+- `Fiber` - in grams
+- `Sugar` - in grams
+- `Calcium` - in milligrams
+- `Potassium` - in milligrams
+- `Sodium` - in milligrams
+- `VitaminC` - Vitamin C, in milligrams
+- `Chol` - Cholesterol, in milligrams
+- `Portion` - Description of standard serving size used in analysis
+
+**(a)** Fit the following multiple linear regression model in `R`. Use `Calories` as the response and `Carbs`, `Fat`, and `Protein` as predictors.
+
+\[
+Y_i = \beta_0 + \beta_1 x_{i1} + \beta_2 x_{i2} + \beta_3 x_{i3} + \epsilon_i.
+\]
+
+Here,
+
+- $Y_i$ is `Calories`
+- $x_{i1}$ is `Carbs`
+- $x_{i2}$ is `Fat`
+- $x_{i3}$ is `Protein`.
+
+Use an $F$-test to test the significance of the regression. This is a repeat of a previous exercise, but is here again only as a reminder. This time report only the following:
+ 
+- The p-value of the test.
+- A statistical decision at $\alpha = 0.01$.
+- A conclusion in the context of the problem.
+
+When reporting these, you should explicitly state them in your document, not assume that a reader will find and interpret them from a large block of `R` output.
+
+```{r}
+nutrition <- read.csv("~/Desktop/nutrition.csv", comment.char="#")
+
+nut_model = lm(Calories ~ Carbs + Fat + Protein, data = nutrition)
+anova(nut_model)
+summary(nut_model)
+
+#The p-value of the test is 2.2e-16 so we can that it is very small. Since the p-value is smaller than alpha, we reject the null hypothesis.
+#The regression is significant so therefore we see a useful linear relationship between the response and predictors. There is a linear relationship between Calories and at least some of Cars, Fat and Protein.
+
+```
+
+**(b)** Check the constant variance assumption for this model. Do you feel it has been violated? Justify your answer.
+```{r}
+#We know that the constant variance assumption is valid if at every fitted value the spread of the residuals is the same.
+
+plot(fitted(nut_model), resid(nut_model), col = "dodgerblue", xlab = "Fitted", ylab = "Residual")
+abline(h = 0, col = "darkorange", lwd = 2)
+
+#The constant variance assumption is violated as you notice the spread differentiation in the middle and start of the fitted values. The spread is not constant.
+```
+
+**(c)** Check the normality assumption for this model. Do you feel it has been violated? Justify your answer.
+
+The `shapiro.test` function only allows for a maximum of 5000 data values. You may select a random sample of 5000 of your residuals instead of the full set. Use the following code and the seed given before running the Shapiro-Wilk test in `R`.
+
+```{r, eval=TRUE, message = TRUE, warning = TRUE}
+set.seed(110116) 
+resid5000 = sample(resid(nut_model), 5000)
+shapiro.test(resid5000)
+
+#The null hypothesis assumes the data follow a normal distribution, thus the small p-value indicates we believe there is only a small probability the data follow a normal distribution. The small p-value allows us to reject the null and conclude that the normality assumption does not hold.
+```
+**(d)** Check for any high leverage observations. Report the number of observations you determine to have high leverage. Print only the first five.
+```{r}
+calories_lev = lm(Calories~Carbs+Fat+Protein, data = nutrition)
+high_lev = hatvalues(calories_lev) > 2 * mean(hatvalues(calories_lev))
+length(hatvalues(calories_lev)[high_lev])
+```
+```{r}
+#First 5
+hatvalues(nut_model)[high_lev][1]
+hatvalues(nut_model)[high_lev][2]
+hatvalues(nut_model)[high_lev][3]
+hatvalues(nut_model)[high_lev][4]
+hatvalues(nut_model)[high_lev][5]
+```
+
+**(e)** Check for any influential observations. Report the number of observations you determine to be influential. Print only the first five.
+```{r}
+inf = cooks.distance(calories_lev) > 4 / length(cooks.distance(calories_lev))
+length(cooks.distance(calories_lev)[inf])
+```
+```{r}
+#First 5
+cooks.distance(calories_lev)[inf][1]
+cooks.distance(calories_lev)[inf][2]
+cooks.distance(calories_lev)[inf][3]
+cooks.distance(calories_lev)[inf][4]
+cooks.distance(calories_lev)[inf][5]
+
+```
+**(f)** Refit the additive multiple regression model without any points you identified as influential. Compare the coefficients of this fitted model to the previously fitted model.
+```{r}
+ca_model = lm(Calories~Carbs+Fat+Protein, data = nutrition, subset = cooks.distance(calories_lev) <= 4 / length(cooks.distance(calories_lev)))
+coef(ca_model)
+```
+
+## Exercise 2 (Swiss Fertility Data)
+
+For this exercise we will use the `swiss` data which can be found in the `faraway` package. After loading the `faraway` package, use `?swiss` to learn about this dataset.
+
+```{r}
+library(faraway)
+```
+
+**(a)** Fit an additive multiple regression model with `Fertility` as the response, and the remaining variables in the `swiss` dataset as predictors. Output the estimated regression coefficients for this model.
+
+```{r}
+fert_model = lm(Fertility ~ Agriculture+Examination+Education+Catholic+Infant.Mortality, data = swiss)
+coef(fert_model)
+
+```
+
+**(b)** Check the constant variance assumption for this model. Do you feel it has been violated? Justify your answer.
+
+```{r}
+plot(fitted(fert_model),resid(fert_model), col="dodgerblue",xlab="Fitted",ylab="Residual")
+abline(h=0,col="darkorange",lwd=3)
+
+#It does seem violated as the spread is evenly distributed
+
+```
+
+**(c)** Check the normality assumption for this model. Do you feel it has been violated? Justify your answer.
+
+```{r}
+shapiro.test(resid(fert_model))
+
+#We see a large p-value. Because of this we don't reject the null and therefore the normality assumption of the model holds. There is constant variance around 50 to 90.
+
+```
+
+**(d)** Check for any high leverage observations. Report any observations you determine to have high leverage.
+
+```{r}
+fert_l = lm(Fertility ~., data = swiss)
+high_lev = hatvalues(fert_l) > 2 * mean(hatvalues(fert_l))
+hatvalues(fert_l)[high_lev]
+
+```
+
+**(e)** Check for any influential observations. Report any observations you determine to be influential.
+
+```{r}
+inf = cooks.distance(fert_l) > 4 / length(cooks.distance(fert_l))
+cooks.distance(fert_l)[inf]
+
+```
+
+**(f)** Refit the additive multiple regression model without any points you identified as influential. Compare the coefficients of this fitted model to the previously fitted model.
+
+```{r}
+fert_add = lm(Fertility ~ Agriculture+Examination+Education+Catholic+Infant.Mortality, data = swiss, subset = cooks.distance(fert_l) <= 4 / length(cooks.distance(fert_l)))
+
+coef(fert_add)
+
+```
+
+**(g)** Create a data frame that stores the observations that were "removed" because they were influential. Use the two models you have fit to make predictions with these observations. Comment on the difference between these two sets of predictions.
+
+```{r}
+Agriculture = c(swiss["Porrentruy","Agriculture"], swiss["Sierre","Agriculture"],swiss["Neuchatel","Agriculture"],swiss["Rive Droite","Agriculture"],27.7)
+
+Examination = c(swiss["Porrentruy","Examination"], swiss["Sierre","Examination"],swiss["Neuchatel","Examination"],swiss["Rive Droite","Examination"],22)
+
+Education = c(swiss["Porrentruy","Education"], swiss["Sierre","Education"],swiss["Neuchatel","Education"],swiss["Rive Droite","Education"],29)
+
+Catholic = c(swiss["Porrentruy","Catholic"], swiss["Sierre","Catholic"],swiss["Neuchatel","Catholic"],swiss["Rive Droite","Catholic"],58.33)
+
+Infant.Mortality = c(swiss["Porrentruy","Infant.Mortality"], swiss["Sierre","Infant.Mortality"],swiss["Neuchatel","Infant.Mortality"],swiss["Rive Droite","Infant.Mortality"],19.3)
+
+newData = data.frame(Agriculture,Examination,Education,Catholic,Infant.Mortality)
+```
+```{r}
+predict(fert_l,newdata = newData)
+```
+```{r}
+predict(fert_add,newdata = newData)
+
+#they are close however fert_add seems better than the whole
+```
+ 
+
+## Exercise 3 (Writing Functions)
+
+**(a)** Write a function that takes as input a model object (variable) fit via `lm()` and outputs a fitted versus residuals plot. Also create arguments `pointcol` and `linecol` which control the point and line colors respectively. Code the plot to add a horizontal line at $y = 0$ and label the $x$-axis "Fitted" and the $y$-axis "Residuals".
+
+```{r}
+pointcol = c("darkgreen")
+linecol = c("deepskyblue")
+
+myResidFunc = function(myModel,pointcol,linecol){
+  plot(fitted(myModel),resid(myModel),col=pointcol,xlab="Fitted",ylab="Residuals",main = "Fitted v Residuals")
+abline(h=0,col=linecol,lwd=2)
+}
+```
+
+**(b)** Write a function that takes as input a model fit via `lm()` plots a Normal Q-Q plot of the residuals. Also create arguments `pointcol` and `linecol` which control the point and line colors respectively. Code the plot to add the line from `qqline()`.
+
+```{r}
+pointcol = c("darkgreen")
+linecol = c("deepskyblue")
+
+myNormalFunct = function(myModel,pointcol,linecol){
+  qqnorm(resid(myModel), main = "Normal Q-Q Plot", col = pointcol)
+  qqline(resid(myModel), col = linecol, lwd = 2)
+}
+```
+
+**(c)** Test your two functions above on the `test_fit` model. For both functions, specify point and line colors that are not black.
+
+```{r}
+set.seed(120168)
+test_data = data.frame(x = runif(20, 0, 10),
+                       y = rep(0, 20))
+test_data$y = 5 + 2 * test_data$x + rnorm(20)
+test_fit = lm(y ~ x, data = test_data)
+
+pointcol = c("darkgreen")
+linecol = c("deepskyblue")
+
+myNormalFunct(test_fit,pointcol,linecol)
+myResidFunc(test_fit,pointcol,linecol)
+```
+
+## Exercise 4 (Why Bother with Assumptions?)
+
+**Why** do we care about violations of assumptions? One key reason is that the distributions of the parameters that we have used are all reliant on these assumptions. When the assumptions are violated, the distributional results are not correct, so are tests are garbage. **Garbage In, Garbage Out!**
+
+Consider the following setup that we will use for the remainder of the exercise. We choose a sample size of 50.
+
+```{r}
+n = 50
+set.seed(123)
+x_1 = runif(n, 0, 10)
+x_2 = runif(n, -5, 5)
+```
+
+Consider the model,
+
+\[
+Y = 2 + 1 x_1 + 0 x_2 + \epsilon.
+\]
+
+That is,
+
+- $\beta_0$ = 2,
+- $\beta_1$ = 1,
+- $\beta_2$ = 0.
+
+We now simulate `y_1` in a manner that doesn't violate any assumptions, which we verify. In this case $\epsilon \sim N(0, 1).$
+
+```{r}
+y_1   = 2 + x_1 + 0 * x_2 + rnorm(n)
+fit_1 = lm(y_1 ~ x_1 + x_2)
+qqnorm(resid(fit_1), col = "dodgerblue")
+qqline(resid(fit_1), col = "darkorange", lwd = 2)
+shapiro.test(resid(fit_1))
+```
+
+Then, we simulate `y_2` in a manner that **does** violate assumptions, which we verify. In this case $\epsilon \sim N(0, \sigma = |x_2|).$
+
+```{r}
+y_2   = 2 + x_1 + 0 * x_2 + rnorm(n, 0, abs(x_2))
+fit_2 = lm(y_2 ~ x_1 + x_2)
+qqnorm(resid(fit_2), col = "dodgerblue")
+qqline(resid(fit_2), col = "darkorange", lwd = 2)
+shapiro.test(resid(fit_2))
+```
+
+**(a)** Use the following code after changing `uin` to your UIN.
+
+```{r}
+num_sims = 1000
+p_val_1 = rep(0, num_sims)
+p_val_2 = rep(0, num_sims)
+uin = 667850670
+set.seed(uin)
+```
+
+Repeat the above process of generating `y_1` and `y_2` as defined above, and fit models with each as the response `1000` times. Each time, store the p-value for testing,
+
+\[
+\beta_2 = 0,
+\]
+
+using both model, in the appropriate variables defined above. (You do not need to use a data frame as we have in the past.)
+
+```{r}
+
+num_sims = 1000
+p_val_1 = rep(0, num_sims)
+p_val_2 = rep(0, num_sims)
+uin = 667850670
+set.seed(uin)
+
+x = runif(n,0,10)
+y = runif(n,-5,5)
+sim = 0
+for(sim in sim:num_sims){
+  fit1 = lm(2 * x + 0*y + rnorm(50) ~ x+y)
+  fit2 = lm(2 * x + 0*y + rnorm(50,0,abs(y)) ~ x+y)
+  p_val_1[sim] = shapiro.test(resid(fit1))[2]
+  p_val_2[sim] = shapiro.test(resid(fit2))[2]
+}
+
+
+```
+
+**(b)** What proportion of the `p_val_1` values are less than 0.05? Less than 0.10? What proportion of the `p_val_2` values are less than 0.05? Less than 0.10? Briefly explain these results.
+
+```{r}
+#less than 0.5
+mean(p_val_1 < 0.05)
+#less than 0.05
+mean(p_val_2 < 0.05)
+#less than .10
+mean(p_val_1 < 0.10)
+#less than .10
+mean(p_val_2 < 0.10)
+
+
+
+```

@@ -1,0 +1,308 @@
+---
+title: 'STAT 420: Homework 2'
+author: "Fall 2016, Unger"
+date: 'Due: Monday, September 19 by 11:50 PM CT'
+output:
+  html_document:
+    theme: readable
+    toc: yes
+---
+
+# Directions
+# Assignment
+
+## Exercise 1 (Using `lm`)
+
+For this exercise we will use the `faithful` dataset. This is a default dataset in `R`, so there is no need to load it. You should use `?faithful` to learn about the background of this dataset.
+
+**(a)** Suppose we would like to predict the duration of an eruption of [the Old Faithful geyser](http://www.yellowstonepark.com/about-old-faithful/) in [Yellowstone National Park](https://en.wikipedia.org/wiki/Yellowstone_National_Park) based on the waiting time before an eruption. Fit a simple linear model in `R` that accomplishes this task. Store the results in a variable called `faithful_model`. Output the result of calling `summary()` on `faithful_model`.
+
+```{r}
+faithful_model = lm(eruptions ~ waiting, data = faithful)
+summary(faithful_model)
+
+```
+
+**(b)** Output only the estimated regression coefficients. Interpret $\beta_0$ and $\hat{\beta_1}$ in the *context of the problem*. Be aware that only one of those is an estimate.
+
+```{r}
+x = faithful$waiting
+y = faithful$eruptions
+Sxy = sum((x - mean(x)) * (y - mean(y)))
+Sxx = sum((x - mean(x)) ^ 2)
+Syy = sum((y - mean(y)) ^ 2)
+c(Sxy, Sxx, Syy)
+beta_1_hat = Sxy / Sxx
+beta_0_hat = mean(y) - beta_1_hat * mean(x)
+c(beta_0_hat, beta_1_hat)
+
+
+```
+
+**(c)** Use your model to predict the duration of an eruption based on a waiting time of **80** minutes. Do you feel confident in this prediction? Briefly explain.
+
+```{r}
+predict(faithful_model, data.frame(waiting = 80))
+
+
+
+#Yes I do. Because if you look linearly at the data set the values were close to the prediction.
+
+```
+
+**(d)** Use your model to predict the duration of an eruption based on a waiting time of **120** minutes. Do you feel confident in this prediction? Briefly explain.
+
+```{r}
+predict(faithful_model, data.frame(waiting = 120))
+
+#Yes I do. Same reason as above.
+
+```
+
+**(e)** Calculate the RSS for this model.
+
+```{r}
+#SEE = RSS = 9443.387 
+
+y_hat = beta_0_hat + beta_1_hat * x
+SST   = sum((y - mean(y)) ^ 2)
+SSReg = sum((y_hat - mean(y)) ^ 2)
+SSE   = sum((y - y_hat) ^ 2)
+c(SST = SST, SSReg = SSReg, SSE = SSE)
+#SSE == 66.56178
+```
+
+
+**(f)** Create a scatterplot of the data and add the fitted regression line. Make sure your plot is well labeled and is somewhat visually appealing.
+
+```{r}
+plot(eruptions ~ waiting, data = faithful,
+      xlab = "Eruptions",
+      ylab = "Waiting",
+      main = "Waiting Time vs Eruptions Duration",
+      pch  = 20,
+      cex  = 1,
+      col  = "dodgerblue")
+abline(faithful_model, lwd = 3, col = "darkorange")
+
+```
+
+
+**(g)** Report the value of $R^2$ for the model. Do so directly. Do not simply copy and paste the value from the full output in the console after running `summary()` in part **(a)**.
+
+```{r}
+
+summary(faithful_model)$r.squared
+
+```
+
+## Exercise 2 (Writing Functions)
+
+This exercise is a continuation of Exercise 1.
+
+**(a)** Write a function called `get_sd_est` that calculates an estimate of $\sigma$ in one of two ways depending on input to the function. The function should take two arguments as input:
+
+- `model_resid` - A vector of residual values from a fitted model.
+- `mle` - A logical (`TRUE` / `FALSE`) variable which defaults to `FALSE`.
+
+The function should return a single value:
+
+- $s_e$ if `mle` is set to `FALSE`.
+- $\hat{\sigma}$ if `mle` is set to `TRUE`.
+
+```{r}
+model_resid = resid(faithful_model)
+get_sd_est = function(model_resid, mle){
+  if(mle == FALSE){
+    e = model_resid
+    n     = length(e)
+    s2_e  = sum(e^2) / (n - 2)
+    s2_e
+    s_e = sqrt(s2_e) #Taking the square root, computes the standard deviation of the residuals, also                     known as residual standard error.
+    s_e
+  }else{ 
+    e = model_resid
+    n     = length(e)
+    o2_e  = sum(e^2) / (n )
+    o2_e
+    o_e = sqrt(o2_e) 
+    o_e
+  }
+}
+```
+
+**(b)** Run the function `get_sd_est` on the residuals from the model in Exercise 1, with `mle` set to `FALSE`.
+```{r}
+get_sd_est(model_resid, FALSE)
+```
+
+**(c)** Run the function `get_sd_est` on the residuals from the model in Exercise 1, with `mle` set to `TRUE`.
+
+```{r}
+get_sd_est(model_resid, TRUE)
+```
+**(d)** To check your work, output `summary(faithful_model)$sigma`. It should match at least one of **(b)** or **(c)**.
+```{r}
+summary(faithful_model)$sigma
+```
+## Exercise 3 (SLR Without Intercept)
+
+Sometimes it can be reasonable to assume that $\beta_0$ should be 0. That is, the line should pass through the point $(0, 0)$. For example, if a car is traveling 0 miles per hour, its stopping distance should be 0! (Unlike what we saw in the book.)
+
+We can simply define a model without an intercept,
+
+\[
+Y_i = \beta x_i + \epsilon_i.
+\]
+
+**(a)** [In the **Least Squares Approach** section of the text](http://daviddalpiaz.github.io/appliedstats/simple-linear-regression.html#least-squares-approach) you saw the calculus behind the derivation of the regression estimates, and then we performed the calculation for the `cars` dataset using `R`. Here you need to do, but not show the derivation for the slope only model. You should then use that derivation of $\hat{\beta}$ to write a function that performs the calculation for the estimate you derived. 
+
+In summary, use the method of least squares to derive an estimate for $\beta$ using data points $(x_i, y_i)$ for $i = 1, 2, \ldots n$. Simply put, find the value of $\beta$ to minimize the function
+
+\[
+f(\beta)=\sum_{i=1}^{n}(y_{i}-\beta x_{i})^{2}.
+\]
+
+Then, write a function `get_beta_no_int` that takes input:
+
+- `x` - A predictor variable.
+- `y` - A response variable.
+
+The function should then output the $\hat{\beta}$ you derived for a given set of data.\
+
+```{r}
+get_beta_no_int = function(x, y){
+  sxy = sum(x * y)-mean(x)*mean(y)
+  sxx = sum(x^2) - mean(x^2)
+  beta_hat = sxy/sxx
+  beta_hat
+}
+```
+
+
+
+**(b)** *This question is optional and you **may** recieve a small number of bonus points for completing it.* Write your derivation in your `.Rmd` file using TeX. Or write your derivation by hand, scan or photograph your work, and insert it into the `.Rmd` as an image. See the RMarkdown documentation for working with images.
+
+**(c)** Test your function on the `faithful` data using the waiting time as `x` and the eruption length as `y`. What is the estimate for $\beta$ for this data?
+
+```{r}
+get_beta_no_int(faithful$waiting,faithful$eruptions)
+```
+
+**(d)** Check your work in `R`. The following syntax can be used to fit a model without an intercept:
+
+```{r}
+lm(faithful$eruptions ~ 0 + faithful$waiting, data = faithful)
+
+```
+
+Use this to fit a model to the `faithful` data without an intercept. Output the coefficient of the fitted model. It should match your answer to **(c)**.
+
+## Exercise 4 (Comparing Models)
+
+For this exercise we will use the data stored in [`goalies.csv`](goalies.csv). It contains career data for all 716 players in the history of the National Hockey League to play goaltender through the 2014-2015 season. The variables in the dataset are:
+
+- `Player` - NHL Player Name
+- `First` - First year of NHL career
+- `Last` - Last year of NHL career
+- `GP` - Games Played
+- `GS` - Games Started
+- `W` - Wins
+- `L` - Losses
+- `TOL` - Ties/Overtime/Shootout Losses
+- `GA` - Goals Against
+- `SA` - Shots Against
+- `SV` - Saves
+- `SV_PCT` - Save Percentage
+- `GAA` - Goals Against Average
+- `SO` - Shutouts
+- `MIN` - Minutes
+- `G` - Goals (that the player recorded, not opponents)
+- `A` - Assists (that the player recorded, not opponents)
+- `PTS` - Points (that the player recorded, not opponents)
+- `PIM` - Penalties in Minutes
+
+For this exercise we will define the "Root Mean Square Error" of a model as
+
+\[
+RMSE = \sqrt{\frac{1}{n} \sum_{i = 1}^{n}(y_i - \hat{y}_i)^2}.
+\]
+
+**(a)** Fit a model with "wins"" as the response and "minutes" as the predictor. Calculate the RMSE of this model. Also provide a scatterplot with the fitted regression line.
+
+```{r}
+goalies <- read.csv("~/hw02.Rmd/goalies.csv")
+
+goalies_v = lm(formula = goalies$W ~ goalies$MIN, data = goalies)
+resid_goalies = resid(goalies_v)
+RMSE <- sqrt(mean((resid_goalies)^2))
+
+#RMSE = 16.75758
+
+plot(goalies$W ~ goalies$MIN, data = goalies,
+      xlab = "Minutes for Each Player",
+      ylab = "Wins for Each Player",
+      main = "Minutes Vs. Wins",
+      pch  = 20,
+      cex  = 0.5,
+      col  = "dodgerblue")
+abline(goalies_v, lwd = 3, col = "darkorange")
+
+```
+
+**(b)** Fit a model with "wins"" as the response and "goals against" as the predictor. Calculate the RMSE of this model. Also provide a scatterplot with the fitted regression line.
+
+```{r}
+goalies <- read.csv("~/hw02.Rmd/goalies.csv")
+
+goalies_v = lm(formula = goalies$W ~ goalies$GA, data = goalies)
+resid_goalies = resid(goalies_v)
+RMSE <- sqrt(mean((resid_goalies)^2))
+
+#RSME = 31.08159
+
+plot(goalies$W ~ goalies$GA, data = goalies,
+      xlab = "Number of Wins for Each Player",
+      ylab = "Number of Goals for Each Player",
+      main = "Wins vs Goals",
+      pch  = 20,
+      cex  = 0.5,
+      col  = "dodgerblue")
+abline(goalies_v, lwd = 3, col = "darkorange")
+
+```
+
+**(c)** Fit a model with "wins"" as the response and "shutouts" as the predictors. Calculate the RMSE of this model. Also provide a scatterplot with the fitted regression line.
+
+```{r}
+
+goalies <- read.csv("~/hw02.Rmd/goalies.csv")
+
+goalies_v = lm(formula = goalies$W ~ goalies$SO, data = goalies)
+resid_goalies = resid(goalies_v)
+RMSE <- sqrt(mean((resid_goalies)^2))
+
+#RSME = 44.83837
+
+plot(goalies$W ~ goalies$SO, data = goalies,
+      xlab = "Numbers of Wins for Each Player",
+      ylab = "Numbers of Shutouts for Each Player",
+      main = "Wins vs Shutouts",
+      pch  = 20,
+      cex  = 0.5,
+      col  = "dodgerblue")
+abline(goalies_v, lwd = 3, col = "darkorange")
+```
+
+**(d)** Based on the previous three models, which of the three predictors used is most helpful for predicting wins? Briefly explain.
+
+```{r}
+
+#First one because the RSME was the smallest.
+
+
+
+```
+
+
+
