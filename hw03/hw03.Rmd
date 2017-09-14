@@ -1,0 +1,435 @@
+
+
+# Assignment
+
+## Exercise 1 (Using `lm` for Inference)
+
+For this exercise we will again use the `faithful` dataset. Remember, this is a default dataset in `R`, so there is no need to load it. You should use `?faithful` to refresh your memory about the background of this dataset about the duration and waiting times of eruptions of [the Old Faithful geyser](http://www.yellowstonepark.com/about-old-faithful/) in [Yellowstone National Park](https://en.wikipedia.org/wiki/Yellowstone_National_Park).
+
+**(a)** Fit the following simple linear regression model in `R`. Use the eruption duration as the response and waiting time as the predictor. 
+
+\[
+Y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+\]
+
+Store the results in a variable called `faithful_model`. Use a $t$ test to test the significance of the regression. Report the following:
+
+- The null and alternative hypotheses.
+- The value of the test statistic.
+- The p-value of the test.
+- A statistical decision at $\alpha = 0.01$.
+- A conclusion in the context of the problem.
+
+When reporting these, you should explicitly state them in your document, not assume that a reader will find and interpret them from a large block of `R` output.
+
+```{r}
+
+#Alternative Hypothesis: B1 != 0
+#Null Hypothesis: B1 = 0
+
+faithful_model = lm(faithful$eruptions~faithful$waiting, data = faithful)
+summary(faithful_model)
+
+names(summary(faithful_model))
+summary(faithful_model)$coefficients
+ #B1_hat = 0.0756 , B0_hat = -1.874 and
+summary(faithful_model)$coefficients[2,]
+
+#p value = 8.13E-100
+#t value = 3.409E1
+#with a very low p-value we reject null at sig level alpha = 0.01
+#Between eruptions and wait time there is a significant linear relationship
+
+faithful_mt_info = summary(faithful_model)$coefficients
+
+
+```
+
+
+**(b)** Calculate a 99% confidence interval for $\beta_1$. Give an interpretation of the interval in the context of the problem.
+
+```{r}
+
+confint(faithful_model, level = 0.99)[2,]
+#interval small || confidence high
+
+```
+
+**(c)** Calculate a 90% confidence interval for $\beta_0$. Give an interpretation of the interval in the context of the problem.
+
+```{r}
+
+confint(faithful_model, level = 0.90)[1,]
+
+#confidence interval -> negative so the difference is -, the range is small though so it's accurate
+
+```
+
+**(d)** Use a 95% confidence interval to estimate the mean eruption duration for waiting times of 75 and 80 minutes. Which of the two intervals is wider? Why?
+
+```{r, eval = FALSE}
+
+faithful_new = data.frame(waiting = c(75, 80))
+predict(faithful_model, newdata = faithful_new, 
+        interval = c("confidence"), level = 0.95)
+
+#     fit      lwr      upr
+#1 3.79808 3.736159 3.860002
+#2 4.17622 4.104848 4.247592
+
+#The second because there is more confidence
+
+```
+
+**(e)** Use a 95% prediction interval to predict the eruption duration for waiting times of 75 and 100 minutes.
+
+```{r}
+
+faithful_model = lm(eruptions~waiting, data = faithful)
+faithful_new = data.frame(waiting = c(75, 100))
+predict(faithful_model, newdata =faithful_new, 
+        interval = c("confidence"), level = 0.95)
+
+```
+
+**(f)** Create a scatterplot of the data. Add the regression line, 95% confidence bands, and 95% prediction bands.
+
+```{r}
+
+faith_grid = seq(min(faithful$waiting), max(faithful$waiting), by = 0.01)
+dist_ci_band = predict(faithful_model, 
+                           newdata = data.frame(waiting = faith_grid), 
+                           interval = "confidence", level = 0.95)
+dist_pi_band = predict(faithful_model, 
+                           newdata = data.frame(waiting = faith_grid), 
+                           interval = "prediction", level = 0.95) 
+
+plot(eruptions ~ waiting, data = faithful,
+     xlab = "Waiting time (min)",
+     ylab = "Eruption time (min)",
+     main = "Eruption time vs Waiting time",
+     pch  = 20,
+     cex  = 2,
+     col  = "pink",
+     ylim = c(0, 10))
+abline(faithful_model, lwd = 5, col = "red")
+
+lines(faith_grid, dist_ci_band[,"lwr"], col = "pink", lwd = 3, lty = 2)
+lines(faith_grid, dist_ci_band[,"upr"], col = "pink", lwd = 3, lty = 2)
+lines(faith_grid, dist_pi_band[,"lwr"], col = "blue", lwd = 3, lty = 2)
+lines(faith_grid, dist_pi_band[,"upr"], col = "blue", lwd = 3, lty = 2)
+points(mean(faithful$waiting), mean(faithful$eruptions), pch = "+", cex = 2)
+
+
+```
+
+## Exercise 2 (Using `lm` for Inference)
+
+For this exercise we will again use the `diabetes` dataset which can be found in the `faraway` package.
+
+**(a)** Fit the following simple linear regression model in `R`. Use the total cholesterol as the response and weight as the predictor. 
+
+\[
+Y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+\]
+
+Store the results in a variable called `cholesterol_model`. Use an $F$ test to test the significance of the regression. Report the following:
+
+- The null and alternative hypotheses.
+- The ANOVA table. (You may use `anova()` and omit the row for Total.)
+- The value of the test statistic.
+- The p-value of the test.
+- A statistical decision at $\alpha = 0.05$.
+- A conclusion in the context of the problem.
+
+When reporting these, you should explicitly state them in your document, not assume that a reader will find and interpret them from a large block of `R` output.
+
+```{r}
+library(faraway)
+
+#Alternative Hypothesis: B1 != 0
+#Null Hypothesis: B1 = 0
+
+cholesterol_model = lm(chol~weight, data = diabetes)
+summary(cholesterol_model)
+
+anova(cholesterol_model)
+
+#f-stat = 1.7932
+#p value = 0.1813
+
+#with a low p-value, we would reject the null at significant level alpha = 0.5
+#Between hip and time there is a significant linear relationship
+
+```
+
+**(b)** Fit the following simple linear regression model in `R`. Use HDL as the response and weight as the predictor. 
+
+\[
+Y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+\]
+
+Store the results in a variable called `hdl_model`. Use an $F$ test to test the significance of the regression. Report the following:
+
+- The null and alternative hypotheses.
+- The ANOVA table. (You may use `anova()` and omit the row for Total.)
+- The value of the test statistic.
+- The p-value of the test.
+- A statistical decision at $\alpha = 0.05$.
+- A conclusion in the context of the problem.
+
+When reporting these, you should explicitly state them in your document, not assume that a reader will find and interpret them from a large block of `R` output.
+
+```{r}
+
+##Null Hypothesis: B1 = 0
+#Alternative Hypothesis: B1 != 0
+hdl_model = lm(hdl~weight, data = diabetes)
+summary(hdl_model)
+anova(hdl_model) 
+
+#p value = 2.89E-9
+# f stat = 36.9
+
+
+#Rreject the null at significance level alpha = 0.05 because low p value
+#We see sig linear relationship between hdl and weight
+
+
+```
+
+## Exercise 3 (Inference "Without" `lm`)
+
+For this exercise we will once again use the data stored in [`goalies.csv`](goalies.csv). It contains career data for all 716 players in the history of the National Hockey League to play goaltender through the 2014-2015 season. The two variables we will be interested in are:
+
+- `W` - Wins
+- `MIN` - Minutes
+
+Fit a SLR model with `W` as the response and `MIN` as the predictor. Test $H_0: \beta_1 = 0.008$ vs $H_1: \beta_1 < 0.008$ at $\alpha = 0.01$. Report the following: 
+
+- $\hat{\beta_1}$
+- $SE[\hat{\beta_1}]$
+- The value of the $t$ test statistic.
+- The degrees of freedom.
+- The p-value of the test.
+- A statistical decision at $\alpha = 0.01$.
+
+When reporting these, you should explicitly state them in your document, not assume that a reader will find and interpret them from a large block of `R` output.
+
+You should use `lm()` to fit the model and obtain the estimate and standard error. But then you should directly calculate the remaining values. Hint: be careful with the degrees of freedom. Think about how many observations are being used.
+
+```{r}
+goalies <- read.csv("~/sirasao2_hw03.Rmd/goalies.csv")
+goalies_model = lm(goalies$W~goalies$MIN, data = goalies)
+summary(goalies_model)
+
+goalies_info = summary(goalies_model)$coefficients
+beta_h_1 = goalies_info[2,1]
+beta_h_1
+
+se_hat = goalies_info[2,2]
+se_hat
+
+t_v = goalies_info[2,3]
+t_v
+
+p_v = goalies_info[2,4]
+p_v
+
+#p val is 0 so there is evidence against null hypothesis
+#DOF = n-1 = 716 - 1 = 715
+```
+
+## Exercise 4 (Simulating Sampling Distributions)
+
+For this exercise we will simulate data from the following model:
+
+\[
+Y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+\]
+
+Where $\epsilon_i \sim N(0, \sigma^2).$ Also, the parameters are known to be:
+
+- $\beta_0 = 5$
+- $\beta_1 = 1.5$
+- $\sigma^2 = 16$
+
+We will use samples of size $n = 50$.
+
+**(a)** Simulate this model $2000$ times. Each time use `lm()` to fit a SLR model, then store the value of $\hat{\beta}_0$ and $\hat{\beta}_1$. Set a seed using **your** UIN before performing the simulation. Note, we are simualting the $x$ values once, and then they remain fixed for the remainder of the exercise.
+
+```{r}
+
+n       = 50
+beta_0  = 5
+beta_1  = 1.5
+sigma   = 4
+
+epsilon = rnorm(n, mean = 0, sd = sigma)
+
+x = runif(n, 0, 10)
+y = beta_0 + beta_1 * x + epsilon
+
+sim_fit = lm(y ~ x)
+coef(sim_fit)
+
+uin = 670850670
+set.seed(uin)
+n = 50
+x = seq(0, 20, length = n)
+
+Sxx = sum((x - mean(x)) ^ 2)
+
+(var_beta_1_hat = sigma ^ 2 / Sxx) #sampling dist
+
+(var_beta_0_hat = sigma ^ 2 * (1 / n + mean(x) ^ 2 / Sxx))
+
+num_samples = 2000
+beta_0_hats = rep(0, num_samples)
+beta_1_hats = rep(0, num_samples)
+
+for(i in 1:num_samples) {
+  eps = rnorm(n, mean = 0, sd = sigma)
+  y   = beta_0 + beta_1 * x + eps
+  
+  sim_model = lm(y ~ x)
+  
+  beta_0_hats[i] = coef(sim_model)[1]
+  beta_1_hats[i] = coef(sim_model)[2]
+}
+
+
+```
+
+
+**(b)** For the *known* values of $x$, what is the expected value of $\hat{\beta}_1$?
+
+```{r}
+
+beta_1
+
+```
+
+
+**(c)** For the known values of $x$, what is the standard deviation of $\hat{\beta}_1$?
+
+```{r}
+
+sxx = sum((x-mean(x))^2)
+var_beta_1_hat = sigma ^ 2/sxx
+sqrt(var_beta_1_hat)
+
+```
+
+**(d)** What is the mean of your simulated values of $\hat{\beta}_1$? Does this make sense given your answer in **(b)**?
+
+```{r}
+
+mean(beta_1_hats) #Yes it does
+
+
+```
+
+**(e)** What is the standard deviation of your simulated values of $\hat{\beta}_1$? Does this make sense given your answer in **(c)**?
+
+```{r}
+
+sd(beta_1_hats) #Yes it does
+
+
+```
+
+**(f)** Plot a histogram of your simulated values for $\hat{\beta}_1$. Add the normal curve for the true sampling distribution of $\hat{\beta}_1$.
+
+```{r}
+
+hist(beta_0_hats, prob = TRUE, breaks = 20, 
+     xlab = expression(hat(beta)[0]), main = "", border = "dodgerblue")
+curve(dnorm(x, mean = beta_0, sd = sqrt(var_beta_0_hat)),
+      col = "darkorange", add = TRUE, lwd = 3)
+
+```
+
+**(g)** Create a scatterplot of the $x$ values and the fitted $y$ values from the true model. Create $2000$ new samples of size `n = 50` from the model. Each time use `lm()` to fit a SLR model, and add the fitted regression line to the plot. (The points from your original scatterplot will not longer be visible, this is okay.) Add a final line that is thicker, and a different color, for the true model.
+
+```{r}
+n       = 50
+beta_0  = 5
+beta_1  = 1.5
+sigma   = 4
+
+epsilon = rnorm(n, mean = 0, sd = sigma)
+
+x = runif(n, 0, 10)
+y = beta_0 + beta_1 * x + epsilon
+
+sim_fit = lm(y ~ x)
+coef(sim_fit)
+
+uin = 670850670
+set.seed(uin)
+n = 50
+x = seq(0, 20, length = n)
+
+Sxx = sum((x - mean(x)) ^ 2)
+
+(var_beta_1_hat = sigma ^ 2 / Sxx) #sampling dist
+
+(var_beta_0_hat = sigma ^ 2 * (1 / n + mean(x) ^ 2 / Sxx))
+
+num_samples = 2000
+beta_0_hats = rep(0, num_samples)
+beta_1_hats = rep(0, num_samples)
+
+for(i in 1:num_samples) {
+  eps = rnorm(n, mean = 0, sd = sigma)
+  y   = beta_0 + beta_1 * x + eps
+  
+  sim_model = lm(y ~ x)
+  
+  beta_0_hats[i] = coef(sim_model)[1]
+  beta_1_hats[i] = coef(sim_model)[2]
+}
+
+
+
+
+
+beta_0 = 5
+beta_1 = 1.5
+sigma = 4
+num_samples = 2000
+beta_0_hats = rep(0, num_samples)
+beta_1_hats = rep(0, num_samples)
+
+for(i in 1:num_samples) {
+  eps = rnorm(n, mean = 0, sd = sigma)
+  y   = beta_0 + beta_1 * x + eps
+  
+  sim_model = lm(y ~ x)
+  
+  beta_0_hats[i] = coef(sim_model)[1]
+  beta_1_hats[i] = coef(sim_model)[2]
+}
+plot(y ~ x, 
+     xlab = "Simulated Predictor",
+     ylab = "Simulated Response",
+     main = "Simulated Regression Data",
+     pch  = 20,
+     cex  = 2,
+     col  = "pink")
+abline(sim_model, lwd = 2, col = "blue")
+sim_s = function(n, x, beta_0 = 5, beta_1 = 1.5, sigma = 4) {
+  epsilon = rnorm(n, mean = 0, sd = sigma)
+  y  = beta_0 + beta_1 * x + epsilon
+  data.frame(predictor = x, response = y)
+}
+
+sim_data = sim_s(n = 2000, x = x, beta_0 = 5, beta_1 = 1.5, sigma = 4)
+sim_fit = lm(response ~ predictor, data = sim_data)
+abline(sim_fit, lwd = 4, col = "palevioletred4")
+
+
+
+
+```
